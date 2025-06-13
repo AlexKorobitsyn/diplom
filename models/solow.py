@@ -1,4 +1,4 @@
-#models/solow.py
+# models/solow.py
 import numpy as np
 from scipy.integrate import solve_ivp
 from .base_model import GrowthModel
@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 
 
 class SolowModel(GrowthModel):
-
     DEFAULT_PARAMS = {
         's': 0.3,
         'alpha': 0.33,
@@ -15,81 +14,82 @@ class SolowModel(GrowthModel):
         'delta': 0.05
     }
 
-    def __init__(self):
-        self.delta = 0.05
-        self.g = 0.02
-        self.n = 0.01
-        self.alpha = 0.33
-        self.s = 0.3
-
     def steady_state(self, **params):
-        self.s = params.get('s', self.DEFAULT_PARAMS['s'])
-        self.alpha = params.get('alpha', self.DEFAULT_PARAMS['alpha'])
-        self.n = params.get('n', self.DEFAULT_PARAMS['n'])
-        self.g = params.get('g', self.DEFAULT_PARAMS['g'])
-        self.delta = params.get('delta', self.DEFAULT_PARAMS['delta'])
+        p = {**self.DEFAULT_PARAMS, **params}
+        s = p['s']
+        alpha = p['alpha']
+        n = p['n']
+        g = p['g']
+        delta = p['delta']
 
-        return ((self.n + self.g + self.delta) / self.s) ** (1 / (self.alpha-1))
+        return (s / (n + g + delta)) ** (1 / (1 - alpha))
 
     def simulate(self, k0, t_span=(0, 100), **params):
         p = {**self.DEFAULT_PARAMS, **params}
+
         def dk_dt(t, k):
             return (p['s'] * self.production(k, p['alpha'])
                     - (p['n'] + p['g'] + p['delta']) * k)
-        if isinstance(k0, float) or isinstance(k0, int):
-            sol = solve_ivp(dk_dt, t_span, [k0], t_eval=np.linspace(*t_span, 500))
-        else:
-            sol = solve_ivp(dk_dt, t_span, k0, t_eval=np.linspace(*t_span, 500))
+
+        sol = solve_ivp(dk_dt, t_span, [k0], t_eval=np.linspace(*t_span, 500))
         return sol.t, sol.y[0]
 
-
     def phase_diagram(self, k0_list=None, t_span=(0, 100), n_arrows=20, labels=True, legend=True):
-        print(type(k0_list))
-        """
-        Фазовая диаграмма модели Солоу: Показывает, как капитал k(t) стремится к стационарному значению k*. 
-        Добавляет стрелки, указывающие направление движения k со временем.
-        Параметры: k0_list: список начальных значений капитала. 
-        t_span: диапазон времени. n_arrows: количество стрелочек на поле.
-        labels: отображать ли подписи. legend: отображать ли легенду.
-        """
+        self.s = self.DEFAULT_PARAMS['s']
+        self.alpha = self.DEFAULT_PARAMS['alpha']
+        self.n = self.DEFAULT_PARAMS['n']
+        self.g = self.DEFAULT_PARAMS['g']
+        self.delta = self.DEFAULT_PARAMS['delta']
         if k0_list is None:
-            k0_list = [0.5 * self.steady_state(), 0.8 * self.steady_state(),
-                       1.2 * self.steady_state(), 1.5 * self.steady_state()]
+            k_star = self.steady_state()
+            k0_list = [0.5 * k_star, 0.8 * k_star, 1.2 * k_star, 1.5 * k_star]
 
         k_star = self.steady_state()
-
         plt.figure(figsize=(10, 6))
 
-        t = np.linspace(*t_span, 500)
-        our_max =  2 * k_star
-        for k0 in k0_list:
-            print(k0)
-            _, k_traj = self.simulate(k0, t_span=t_span)
-            our_max = max(our_max, k_traj.max())
-            plt.plot(t, k_traj, label=f'$k_0={k0:.2f}$')
-
-        k_vals = np.linspace(0.1, our_max, n_arrows)
-        t_vals = np.linspace(*t_span, n_arrows)
-        T, K = np.meshgrid(t_vals, k_vals)
+        k_min = min(k0_list) * 0.8
+        k_max = max(k0_list) * 1.2
+        t = np.linspace(t_span[0], t_span[1], 20)
+        k = np.linspace(k_min, k_max, 15)
+        T, K = np.meshgrid(t, k)
 
         dkdt = self.s * K ** self.alpha - (self.n + self.g + self.delta) * K
-        dt = np.ones_like(dkdt)  # по времени шаг всегда вперед
+        dt = np.ones_like(dkdt)
 
         magnitude = np.sqrt(dt ** 2 + dkdt ** 2)
-        dt /= magnitude
-        dkdt /= magnitude
+        dt_normalized = dt / magnitude
+        dkdt_normalized = dkdt / magnitude
 
-        plt.quiver(T, K, dt, dkdt, angles='xy', alpha=0.4, pivot='mid', color='gray')
+        plt.quiver(T, K, dt_normalized, dkdt_normalized,
+                   color='gray', scale=20, width=0.003, alpha=0.7)
 
-        # Линия стационарного состояния
-        plt.axhline(y=k_star, color='r', linestyle='--', label='$k^*$ (уст. сост.)')
+        for k0 in k0_list:
+            t_vals, k_vals = self.simulate(k0, t_span=t_span)
+            line, = plt.plot(t_vals, k_vals, linewidth=2,
+                             label=f'$k_0={k0:.2f}$')
+
+            if len(t_vals) > 1:
+                plt.arrow(t_vals[5], k_vals[5],
+                          t_vals[10] - t_vals[5], k_vals[10] - k_vals[5],
+                          shape='full', color=line.get_color(),
+                          length_includes_head=True,
+                          head_width=0.8, head_length=1.5, alpha=0.8)
+
+                plt.arrow(t_vals[-10], k_vals[-10],
+                          t_vals[-5] - t_vals[-10], k_vals[-5] - k_vals[-10],
+                          shape='full', color=line.get_color(),
+                          length_includes_head=True,
+                          head_width=0.8, head_length=1.5, alpha=0.8)
+
+        plt.axhline(y=k_star, color='r', linestyle='--',
+                    label='$k^*$ (уст. сост.)')
 
         if labels:
-            plt.title("Фазовый портрет модели Солоу")
+            plt.title("График выхода на устойчивый уровень капиталовооружённости")
             plt.xlabel("Время $t$")
             plt.ylabel("Капитал на эффективного работника $k(t)$")
         if legend:
-            plt.legend()
+            plt.legend(loc='lower right')
         plt.grid(True)
         plt.tight_layout()
         plt.show()

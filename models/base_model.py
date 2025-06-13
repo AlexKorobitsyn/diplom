@@ -16,14 +16,12 @@ class GrowthModel(ABC):
 
     @abstractmethod
     def simulate(self, k0, t_span, **params):
-        #Симуляция траектории
         pass
 
     @staticmethod
     def plot_results(t_values, k_values, k_star, model_name):
         plt.figure(figsize=(10, 6))
 
-        # Настройки стрелок
         arrow_kwargs = {
             'length_includes_head': True,
             'head_width': 0.5,
@@ -36,12 +34,10 @@ class GrowthModel(ABC):
             line, = plt.plot(t, k, label=f"Траектория k₀ = {k[0]:.2f}")
 
             if len(t) > 1:
-                # Стрелка в начале
                 dx = t[1] - t[0]
                 dy = k[1] - k[0]
                 plt.arrow(t[0], k[0], dx * 0.8, dy * 0.8, **arrow_kwargs)
 
-                # Стрелка в конце
                 dx = t[-1] - t[-2]
                 dy = k[-1] - k[-2]
                 plt.arrow(t[-2], k[-2], dx * 0.8, dy * 0.8, **arrow_kwargs)

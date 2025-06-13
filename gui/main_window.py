@@ -59,7 +59,7 @@ class ModelApp:
         for widget in self.param_frame.winfo_children():
             widget.destroy()
 
-        self.entries = {}  # <-- добавлено объявление словаря
+        self.entries = {}
 
         model = self.model_var.get()
         row = 0
@@ -132,12 +132,20 @@ class ModelApp:
                 t_values.append(t)
                 k_values.append(k)
 
-            model.plot_results(t_values, k_values, k_star, model_name)
             model.phase_diagram(k0_list=k0s)
 
+        elif model_name == 'RCK':
+            params = {k: v.get() for k, v in self.params.items()}
+            k0s = [params[f'k0_{i + 1}'] for i in range(4)]
+
+            if hasattr(model, 'trajectories'):
+                model.trajectories = []
+
+            for k0 in k0s:
+                model.simulate(k0, **params)
+            model.phase_diagram()
         elif model_name == 'SRL':
             params = {key: float(entry.get()) for key, entry in self.entries.items()}
-            # Добавим параметры по умолчанию для времени и начальных условий
             params['t_span'] = (0, 50)
             params['t_eval'] = np.linspace(0, 50, 1000)
             params['x0'] = [0.9, 0.5, 1.0, 0.2, 0.2, 0.2]

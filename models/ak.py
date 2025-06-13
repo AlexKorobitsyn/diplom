@@ -16,11 +16,6 @@ class AKModel(GrowthModel):
     }
 
     def steady_state(self, **params):
-        """
-        Вычисление стационарного состояния для AK-модели
-        В AK-модели нет стационарного состояния в традиционном смысле,
-        возвращаем теоретическое значение для визуализации
-        """
         p = {**self.DEFAULT_PARAMS, **params}
         return p['s'] * p['A'] / (p['n'] + p['g'] + p['delta'])
 
